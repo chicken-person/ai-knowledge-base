@@ -33,3 +33,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_conversations_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_documents_user_created ON documents(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_chunks_document_index ON document_chunks(document_id, chunk_index);
+CREATE INDEX IF NOT EXISTS idx_conversations_user_created ON conversations(user_id, created_at);

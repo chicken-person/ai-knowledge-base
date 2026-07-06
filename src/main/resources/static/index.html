@@ -6,18 +6,18 @@
   <title>AI 文档知识库</title>
   <style>
     :root {
-      --bg: #f6f8fb;
+      --bg: #f4f7fb;
       --surface: #ffffff;
-      --surface-2: #eef4f8;
+      --surface-soft: #edf4f8;
       --ink: #17202a;
       --muted: #637083;
-      --line: #d9e2ec;
+      --line: #d8e2ec;
       --primary: #1769aa;
-      --primary-2: #0f4f87;
+      --primary-strong: #0f4f87;
       --green: #1f8a5b;
-      --amber: #b46a00;
+      --amber: #a95f00;
       --red: #b42318;
-      --shadow: 0 14px 34px rgba(31, 52, 76, 0.12);
+      --shadow: 0 16px 36px rgba(31, 52, 76, 0.12);
       font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
     }
 
@@ -25,48 +25,46 @@
 
     body {
       margin: 0;
+      min-height: 100vh;
       color: var(--ink);
-      background:
-        linear-gradient(180deg, rgba(23, 105, 170, 0.08), rgba(255, 255, 255, 0) 280px),
-        var(--bg);
+      background: linear-gradient(180deg, rgba(23, 105, 170, 0.10), rgba(255,255,255,0) 270px), var(--bg);
     }
 
-    button, input, textarea, select {
-      font: inherit;
-    }
+    button, input, textarea { font: inherit; }
 
     button {
-      border: 0;
-      cursor: pointer;
-      border-radius: 6px;
       min-height: 38px;
+      border: 0;
+      border-radius: 6px;
       padding: 0 14px;
       color: #fff;
       background: var(--primary);
-      font-weight: 700;
+      font-weight: 800;
+      cursor: pointer;
     }
 
-    button:hover { background: var(--primary-2); }
-    button.secondary { color: var(--ink); background: #e7edf3; }
+    button:hover { background: var(--primary-strong); }
+    button.secondary { color: var(--ink); background: #e6edf3; }
     button.secondary:hover { background: #d7e1eb; }
+    button.danger { background: var(--red); }
+    button.danger:hover { background: #8f1b13; }
     button.ghost { color: var(--primary); background: transparent; border: 1px solid var(--line); }
-    button.ghost:hover { background: #edf5fb; }
     button:disabled { opacity: 0.55; cursor: not-allowed; }
 
     input, textarea {
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 6px;
-      background: #fff;
-      color: var(--ink);
       padding: 10px 11px;
+      color: var(--ink);
+      background: #fff;
       outline: none;
     }
 
     textarea {
-      min-height: 160px;
+      min-height: 150px;
       resize: vertical;
-      line-height: 1.55;
+      line-height: 1.6;
     }
 
     input:focus, textarea:focus {
@@ -75,61 +73,52 @@
     }
 
     .shell {
-      width: min(1440px, calc(100% - 32px));
+      width: min(1480px, calc(100% - 32px));
       margin: 0 auto;
       padding: 24px 0 34px;
     }
 
     .topbar {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      gap: 16px;
-      padding: 14px 0 22px;
+      align-items: center;
+      gap: 18px;
+      padding: 12px 0 22px;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 0;
-    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 
     .mark {
-      width: 38px;
-      height: 38px;
-      border-radius: 8px;
+      width: 40px;
+      height: 40px;
       display: grid;
       place-items: center;
+      border-radius: 8px;
       color: #fff;
       background: linear-gradient(135deg, #1769aa, #1f8a5b);
       font-weight: 900;
     }
 
-    h1 {
-      font-size: 24px;
-      line-height: 1.2;
-      margin: 0;
-      letter-spacing: 0;
-    }
+    h1 { margin: 0; font-size: 25px; line-height: 1.2; letter-spacing: 0; }
+    h2 { margin: 0; font-size: 15px; }
 
     .subtitle {
+      margin-top: 4px;
       color: var(--muted);
       font-size: 13px;
-      margin-top: 4px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    .login-strip {
+    .account {
       display: grid;
       grid-template-columns: minmax(120px, 170px) minmax(120px, 170px) auto auto;
-      gap: 8px;
       align-items: center;
+      gap: 8px;
     }
 
-    .status-pill {
+    .pill {
       display: inline-flex;
       align-items: center;
       gap: 7px;
@@ -137,211 +126,151 @@
       padding: 0 10px;
       border-radius: 999px;
       color: var(--green);
-      background: #e6f5ed;
+      background: #e5f4ec;
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 800;
       white-space: nowrap;
     }
 
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: currentColor;
-    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 
-    .grid {
+    .layout {
       display: grid;
-      grid-template-columns: 390px minmax(0, 1fr);
+      grid-template-columns: 380px minmax(0, 1fr);
       gap: 18px;
       align-items: start;
     }
 
+    .stack { display: grid; gap: 18px; }
+
     .panel {
-      background: rgba(255, 255, 255, 0.96);
       border: 1px solid var(--line);
       border-radius: 8px;
+      background: rgba(255,255,255,0.96);
       box-shadow: var(--shadow);
+      overflow: hidden;
     }
 
-    .panel-header {
+    .panel-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
       padding: 15px 16px;
       border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.72);
     }
 
-    .panel-title {
-      font-size: 15px;
-      font-weight: 800;
-      margin: 0;
-    }
+    .panel-body { padding: 16px; }
 
-    .panel-body {
-      padding: 16px;
-    }
+    .field { display: grid; gap: 7px; margin-bottom: 12px; }
+    label { color: var(--muted); font-size: 13px; font-weight: 800; }
 
-    .field {
-      display: grid;
-      gap: 7px;
-      margin-bottom: 12px;
-    }
-
-    label {
-      font-size: 13px;
-      color: var(--muted);
-      font-weight: 700;
-    }
-
-    .actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-
-    .main-stack {
-      display: grid;
-      gap: 18px;
-    }
+    .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
     .stats {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 12px;
     }
 
     .stat {
-      padding: 14px 15px;
       border: 1px solid var(--line);
       border-radius: 8px;
+      padding: 14px 15px;
       background: var(--surface);
     }
 
-    .stat strong {
-      display: block;
-      font-size: 24px;
-      line-height: 1.1;
-      margin-bottom: 4px;
-    }
+    .stat strong { display: block; font-size: 24px; line-height: 1.1; margin-bottom: 4px; }
+    .stat span { color: var(--muted); font-size: 13px; font-weight: 800; }
 
-    .stat span {
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 700;
+    .workbench {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+      gap: 18px;
+      align-items: start;
     }
 
     .answer {
-      white-space: pre-wrap;
-      line-height: 1.65;
-      min-height: 164px;
-      padding: 16px;
-      border-radius: 8px;
+      min-height: 190px;
       border: 1px solid #cfe0ef;
+      border-radius: 8px;
+      padding: 16px;
       background: #f8fbfe;
+      line-height: 1.7;
+      white-space: pre-wrap;
     }
 
-    .list {
-      display: grid;
-      gap: 10px;
+    .confidence {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 900;
     }
+
+    .bar {
+      width: 120px;
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #dce8f2;
+    }
+
+    .bar span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #1769aa, #1f8a5b); }
+
+    .list { display: grid; gap: 10px; }
 
     .item {
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: var(--surface);
       padding: 12px;
+      background: var(--surface);
     }
 
-    .item-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 6px;
-    }
+    .item-title { font-weight: 900; overflow-wrap: anywhere; }
+    .meta { margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .snippet { margin-top: 8px; color: var(--ink); line-height: 1.58; overflow-wrap: anywhere; }
 
-    .item-title {
-      font-weight: 800;
-      min-width: 0;
-      overflow-wrap: anywhere;
-    }
+    .mini-actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 10px; }
+    .mini-actions button { min-height: 32px; padding: 0 10px; font-size: 13px; }
 
-    .meta {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .score {
-      flex: 0 0 auto;
-      color: var(--amber);
-      background: #fff3df;
-      border-radius: 999px;
-      padding: 4px 8px;
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .tabs {
-      display: flex;
-      gap: 6px;
-      padding: 6px;
-      border-radius: 8px;
-      background: var(--surface-2);
-    }
-
-    .tab {
-      min-height: 32px;
-      color: var(--muted);
-      background: transparent;
-      padding: 0 12px;
-    }
-
-    .tab.active {
-      color: var(--ink);
-      background: #fff;
-      box-shadow: 0 1px 4px rgba(28, 46, 68, 0.1);
-    }
-
-    .hidden { display: none !important; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
     .toast {
       position: fixed;
       right: 20px;
       bottom: 20px;
+      z-index: 10;
       max-width: min(420px, calc(100vw - 40px));
       padding: 12px 14px;
       border-radius: 8px;
       color: #fff;
       background: #17202a;
       box-shadow: var(--shadow);
-      transform: translateY(90px);
       opacity: 0;
+      transform: translateY(90px);
       transition: 0.2s ease;
-      z-index: 10;
     }
 
-    .toast.show {
-      transform: translateY(0);
-      opacity: 1;
-    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .hidden { display: none !important; }
 
-    @media (max-width: 980px) {
+    @media (max-width: 1120px) {
       .topbar { align-items: flex-start; flex-direction: column; }
-      .login-strip { width: 100%; grid-template-columns: 1fr 1fr auto; }
-      .status-pill { grid-column: 1 / -1; width: fit-content; }
-      .grid { grid-template-columns: 1fr; }
-      .stats { grid-template-columns: 1fr; }
+      .account { width: 100%; grid-template-columns: 1fr 1fr auto; }
+      .pill { grid-column: 1 / -1; width: fit-content; }
+      .layout, .workbench { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     @media (max-width: 620px) {
-      .shell { width: min(100% - 20px, 1440px); padding-top: 14px; }
-      .login-strip { grid-template-columns: 1fr; }
+      .shell { width: min(100% - 20px, 1480px); padding-top: 14px; }
+      .account, .stats, .two-col { grid-template-columns: 1fr; }
       .actions button { width: 100%; }
-      h1 { font-size: 21px; }
+      .mini-actions button { width: auto; flex: 1 1 120px; }
+      h1 { font-size: 22px; }
       .subtitle { white-space: normal; }
     }
   </style>
@@ -353,100 +282,120 @@
         <div class="mark">AI</div>
         <div>
           <h1>AI 文档知识库</h1>
-          <div class="subtitle">Spring Boot · 本地向量检索 · RAG 问答</div>
+          <div class="subtitle">Spring Boot · 本地向量检索 · RAG 问答闭环</div>
         </div>
       </div>
-      <div class="login-strip">
+      <div class="account">
         <input id="username" value="demo" aria-label="用户名" />
         <input id="password" value="demo123456" type="password" aria-label="密码" />
         <button id="loginBtn">登录</button>
-        <span class="status-pill"><span class="dot"></span><span id="loginState">未登录</span></span>
+        <span class="pill"><span class="dot"></span><span id="loginState">未登录</span></span>
       </div>
     </header>
 
-    <main class="grid">
-      <section class="panel">
-        <div class="panel-header">
-          <h2 class="panel-title">知识库输入</h2>
-          <button class="ghost" id="sampleDocBtn">示例</button>
-        </div>
-        <div class="panel-body">
-          <div class="field">
-            <label for="docTitle">文档标题</label>
-            <input id="docTitle" value="Redis 项目实践笔记" />
-          </div>
-          <div class="field">
-            <label for="docName">文件名</label>
-            <input id="docName" value="redis-note.txt" />
-          </div>
-          <div class="field">
-            <label for="docContent">文档内容</label>
-            <textarea id="docContent">Redis 在后端项目中可以用于验证码缓存、热点数据缓存、接口限流和分布式锁。缓存穿透可以用布隆过滤器或空值缓存处理，缓存击穿可以用互斥锁或逻辑过期处理，缓存雪崩可以通过随机过期时间和多级缓存降低风险。</textarea>
-          </div>
-          <div class="actions">
-            <button id="uploadBtn">上传文档</button>
-            <button class="secondary" id="refreshBtn">刷新数据</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="main-stack">
-        <div class="stats">
-          <div class="stat"><strong id="docCount">0</strong><span>文档数</span></div>
-          <div class="stat"><strong id="chunkCount">0</strong><span>文本片段</span></div>
-          <div class="stat"><strong id="chatCount">0</strong><span>问答记录</span></div>
-        </div>
-
+    <main class="layout">
+      <aside class="stack">
         <section class="panel">
-          <div class="panel-header">
-            <h2 class="panel-title">知识库问答</h2>
-            <div class="tabs">
-              <button class="tab active" data-view="answerView">回答</button>
-              <button class="tab" data-view="refsView">引用</button>
-              <button class="tab" data-view="docsView">文档</button>
-              <button class="tab" data-view="historyView">历史</button>
-            </div>
+          <div class="panel-head">
+            <h2>文档入库</h2>
+            <button class="secondary" id="sampleBtn">示例</button>
           </div>
           <div class="panel-body">
             <div class="field">
-              <label for="question">问题</label>
-              <input id="question" value="Redis 在项目里能解决什么问题？" />
+              <label for="docTitle">文档标题</label>
+              <input id="docTitle" value="Redis 缓存治理方案" />
             </div>
-            <div class="actions" style="margin-bottom: 14px;">
-              <button id="askBtn">提问</button>
-              <button class="secondary" id="sampleQuestionBtn">换一个问题</button>
+            <div class="field">
+              <label for="originalName">文件名</label>
+              <input id="originalName" value="redis-cache-plan.md" />
             </div>
-
-            <div id="answerView">
-              <div class="answer" id="answerBox">登录后即可提问。</div>
+            <div class="field">
+              <label for="docContent">文档内容</label>
+              <textarea id="docContent">Redis 在后端项目中可以用于热点数据缓存、验证码缓存、接口限流和分布式锁。缓存穿透可以用布隆过滤器或空值缓存处理，缓存击穿可以用互斥锁或逻辑过期处理，缓存雪崩可以通过随机过期时间和多级缓存降低风险。</textarea>
             </div>
-            <div id="refsView" class="hidden">
-              <div class="list" id="refsList"></div>
-            </div>
-            <div id="docsView" class="hidden">
-              <div class="list" id="docsList"></div>
-            </div>
-            <div id="historyView" class="hidden">
-              <div class="list" id="historyList"></div>
+            <div class="actions">
+              <button id="uploadBtn">上传文档</button>
+              <button class="secondary" id="refreshBtn">刷新</button>
             </div>
           </div>
         </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>文档资产</h2></div>
+          <div class="panel-body">
+            <div id="docsList" class="list"></div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="stack">
+        <div class="stats">
+          <div class="stat"><strong id="docCount">0</strong><span>文档数</span></div>
+          <div class="stat"><strong id="chunkCount">0</strong><span>文本片段</span></div>
+          <div class="stat"><strong id="conversationCount">0</strong><span>问答记录</span></div>
+          <div class="stat"><strong id="referenceCount">0</strong><span>本次引用</span></div>
+        </div>
+
+        <div class="workbench">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>知识库问答</h2>
+              <div class="confidence">
+                <span id="confidenceText">匹配度 0.000</span>
+                <span class="bar"><span id="confidenceBar"></span></span>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="field">
+                <label for="question">问题</label>
+                <input id="question" value="Redis 在项目里能解决什么问题？" />
+              </div>
+              <div class="actions">
+                <button id="askBtn">提问</button>
+                <button class="secondary" id="questionBtn">换题</button>
+              </div>
+              <div id="answerBox" class="answer" style="margin-top:14px;">知识库已就绪。</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>检索证据</h2></div>
+            <div class="panel-body">
+              <div id="sourceList" class="list"></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="workbench">
+          <section class="panel">
+            <div class="panel-head"><h2>分块预览</h2><span class="pill" id="selectedDoc">未选择</span></div>
+            <div class="panel-body">
+              <div id="chunkList" class="list"></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>问答历史</h2></div>
+            <div class="panel-body">
+              <div id="historyList" class="list"></div>
+            </div>
+          </section>
+        </div>
       </section>
     </main>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div id="toast" class="toast"></div>
 
   <script>
-    const state = {
-      token: localStorage.getItem("aiKbToken") || "",
-      user: null,
-      documents: [],
-      conversations: [],
-      references: []
-    };
-
     const $ = (id) => document.getElementById(id);
+    const state = { token: localStorage.getItem("aiKbToken") || "", user: null, documents: [], conversations: [], references: [] };
+    const questions = [
+      "Redis 在项目里能解决什么问题？",
+      "MySQL 索引设计要注意什么？",
+      "RAG 问答的核心流程是什么？",
+      "这个项目面试时应该怎么讲亮点？"
+    ];
 
     function toast(message) {
       const box = $("toast");
@@ -461,13 +410,11 @@
       if (state.token) headers.Authorization = `Bearer ${state.token}`;
       const res = await fetch(path, { ...options, headers });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok || body.success === false) {
-        throw new Error(body.message || `请求失败：${res.status}`);
-      }
+      if (!res.ok || body.success === false) throw new Error(body.message || `请求失败：${res.status}`);
       return body.data;
     }
 
-    async function login() {
+    async function login(showToast = true) {
       const data = await api("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ username: $("username").value, password: $("password").value })
@@ -475,10 +422,9 @@
       state.token = data.token;
       state.user = data.user;
       localStorage.setItem("aiKbToken", state.token);
-      $("loginState").textContent = `已登录：${state.user.username}`;
-      $("answerBox").textContent = "知识库已就绪。";
+      $("loginState").textContent = `已登录：${data.user.username}`;
       await refreshAll();
-      toast("登录成功");
+      if (showToast) toast("登录成功");
     }
 
     async function uploadDocument() {
@@ -488,12 +434,12 @@
           method: "POST",
           body: JSON.stringify({
             title: $("docTitle").value,
-            originalName: $("docName").value,
+            originalName: $("originalName").value,
             content: $("docContent").value
           })
         });
         await refreshAll();
-        toast("文档已写入知识库");
+        toast("文档已入库");
       } finally {
         $("uploadBtn").disabled = false;
       }
@@ -501,7 +447,6 @@
 
     async function askQuestion() {
       $("askBtn").disabled = true;
-      $("answerBox").textContent = "正在检索知识库...";
       try {
         const data = await api("/api/ask", {
           method: "POST",
@@ -509,17 +454,26 @@
         });
         state.references = data.references || [];
         $("answerBox").textContent = data.answer;
-        renderReferences();
-        await loadConversations();
-        switchView("answerView");
+        renderConfidence(data.confidence || 0);
+        renderSources();
+        await loadDashboard();
+        await loadHistory();
+        toast("问答已生成");
       } finally {
         $("askBtn").disabled = false;
       }
     }
 
     async function refreshAll() {
-      await Promise.all([loadDocuments(), loadConversations()]);
-      renderStats();
+      await Promise.all([loadDashboard(), loadDocuments(), loadHistory()]);
+    }
+
+    async function loadDashboard() {
+      const data = await api("/api/dashboard");
+      $("docCount").textContent = data.documentCount;
+      $("chunkCount").textContent = data.chunkCount;
+      $("conversationCount").textContent = data.conversationCount;
+      $("referenceCount").textContent = state.references.length;
     }
 
     async function loadDocuments() {
@@ -527,65 +481,103 @@
       renderDocuments();
     }
 
-    async function loadConversations() {
+    async function loadHistory() {
       state.conversations = await api("/api/conversations");
       renderHistory();
-      renderStats();
     }
 
-    function renderStats() {
-      $("docCount").textContent = state.documents.length;
-      $("chunkCount").textContent = state.documents.reduce((sum, doc) => sum + (doc.chunkCount || 0), 0);
-      $("chatCount").textContent = state.conversations.length;
+    async function showChunks(id) {
+      const doc = state.documents.find(row => row.id === id);
+      $("selectedDoc").textContent = doc ? doc.title : "已选择";
+      const chunks = await api(`/api/documents/${id}/chunks`);
+      $("chunkList").innerHTML = chunks.map(chunk => `
+        <article class="item">
+          <div class="item-title">片段 ${chunk.chunkIndex + 1}</div>
+          <div class="snippet">${escapeHtml(chunk.content)}</div>
+        </article>
+      `).join("") || empty("暂无分块");
+    }
+
+    async function reindexDocument(id) {
+      await api(`/api/documents/${id}/reindex`, { method: "POST" });
+      await refreshAll();
+      await showChunks(id);
+      toast("索引已重建");
+    }
+
+    async function deleteDocument(id) {
+      await api(`/api/documents/${id}`, { method: "DELETE" });
+      $("selectedDoc").textContent = "未选择";
+      $("chunkList").innerHTML = empty("选择文档查看分块");
+      await refreshAll();
+      toast("文档已删除");
     }
 
     function renderDocuments() {
       $("docsList").innerHTML = state.documents.map(doc => `
         <article class="item">
-          <div class="item-head">
-            <div class="item-title">${escapeHtml(doc.title)}</div>
-            <span class="score">${doc.chunkCount} 段</span>
+          <div class="item-title">${escapeHtml(doc.title)}</div>
+          <div class="meta">${escapeHtml(doc.originalName || "manual-input.txt")} · ${doc.chunkCount} 个片段 · ${formatTime(doc.createdAt)}</div>
+          <div class="mini-actions">
+            <button class="secondary" data-action="chunks" data-id="${doc.id}">分块</button>
+            <button class="ghost" data-action="reindex" data-id="${doc.id}">重建索引</button>
+            <button class="danger" data-action="delete" data-id="${doc.id}">删除</button>
           </div>
-          <div class="meta">${escapeHtml(doc.originalName || "text")} · ${formatTime(doc.createdAt)}</div>
         </article>
       `).join("") || empty("暂无文档");
     }
 
-    function renderReferences() {
-      $("refsList").innerHTML = state.references.map(ref => `
+    function renderSources() {
+      $("referenceCount").textContent = state.references.length;
+      $("sourceList").innerHTML = state.references.map((hit, index) => `
         <article class="item">
-          <div class="item-head">
-            <div class="item-title">${escapeHtml(ref.title)}</div>
-            <span class="score">${Math.round((ref.score || 0) * 100)}%</span>
-          </div>
-          <div class="meta">${escapeHtml(ref.content)}</div>
+          <div class="item-title">${index + 1}. ${escapeHtml(hit.title)}</div>
+          <div class="meta">score ${Number(hit.score).toFixed(3)}</div>
+          <div class="snippet">${escapeHtml(hit.content)}</div>
         </article>
-      `).join("") || empty("暂无引用片段");
+      `).join("") || empty("暂无引用");
     }
 
     function renderHistory() {
       $("historyList").innerHTML = state.conversations.map(row => `
         <article class="item">
           <div class="item-title">${escapeHtml(row.question)}</div>
-          <div class="meta" style="margin: 6px 0;">${formatTime(row.createdAt)}</div>
-          <div class="meta">${escapeHtml(row.answer).slice(0, 220)}${row.answer.length > 220 ? "..." : ""}</div>
+          <div class="meta">${formatTime(row.createdAt)}</div>
+          <div class="snippet">${escapeHtml(trim(row.answer, 120))}</div>
         </article>
-      `).join("") || empty("暂无问答记录");
+      `).join("") || empty("暂无历史");
+    }
+
+    function renderConfidence(value) {
+      const score = Math.max(0, Math.min(1, Number(value) || 0));
+      $("confidenceText").textContent = `匹配度 ${score.toFixed(3)}`;
+      $("confidenceBar").style.width = `${Math.round(score * 100)}%`;
+    }
+
+    function sample() {
+      $("docTitle").value = "Java 后端项目面试笔记";
+      $("originalName").value = "backend-interview.md";
+      $("docContent").value = "MySQL 索引可以提升查询效率，但需要考虑区分度、回表成本和写入开销。Redis 适合热点缓存、验证码缓存、接口限流和分布式锁。Spring Boot 项目要讲清楚分层设计、异常处理、参数校验、事务边界和测试覆盖。";
+    }
+
+    function switchQuestion() {
+      const current = questions.indexOf($("question").value);
+      $("question").value = questions[(current + 1 + questions.length) % questions.length];
     }
 
     function empty(text) {
-      return `<div class="item"><div class="meta">${text}</div></div>`;
-    }
-
-    function switchView(id) {
-      ["answerView", "refsView", "docsView", "historyView"].forEach(view => $(view).classList.toggle("hidden", view !== id));
-      document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.view === id));
+      return `<div class="item"><div class="meta">${escapeHtml(text)}</div></div>`;
     }
 
     function escapeHtml(value) {
       return String(value ?? "").replace(/[&<>"']/g, ch => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
       }[ch]));
+    }
+
+    function trim(value, max) {
+      const text = String(value || "").replace(/\s+/g, " ").trim();
+      return text.length > max ? `${text.slice(0, max)}...` : text;
     }
 
     function formatTime(value) {
@@ -595,25 +587,23 @@
 
     $("loginBtn").addEventListener("click", () => login().catch(err => toast(err.message)));
     $("uploadBtn").addEventListener("click", () => uploadDocument().catch(err => toast(err.message)));
-    $("askBtn").addEventListener("click", () => askQuestion().catch(err => {
-      $("answerBox").textContent = "请求失败。";
-      toast(err.message);
-    }));
     $("refreshBtn").addEventListener("click", () => refreshAll().then(() => toast("数据已刷新")).catch(err => toast(err.message)));
-    $("sampleDocBtn").addEventListener("click", () => {
-      $("docTitle").value = "Spring Boot 接口设计笔记";
-      $("docName").value = "spring-api-note.txt";
-      $("docContent").value = "Spring Boot 后端项目通常采用 Controller、Service、Mapper 分层。Controller 负责接收请求和参数校验，Service 负责业务逻辑，Mapper 或 JdbcTemplate 负责数据访问。统一返回结构和全局异常处理可以提升接口一致性。";
+    $("askBtn").addEventListener("click", () => askQuestion().catch(err => toast(err.message)));
+    $("questionBtn").addEventListener("click", switchQuestion);
+    $("sampleBtn").addEventListener("click", sample);
+    $("docsList").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const id = Number(button.dataset.id);
+      const actions = { chunks: showChunks, reindex: reindexDocument, delete: deleteDocument };
+      actions[button.dataset.action](id).catch(err => toast(err.message));
     });
-    $("sampleQuestionBtn").addEventListener("click", () => {
-      const questions = ["RAG 的流程是什么？", "MySQL 索引为什么能提升查询效率？", "Spring Boot 项目为什么要分层？"];
-      $("question").value = questions[Math.floor(Math.random() * questions.length)];
-    });
-    document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => switchView(tab.dataset.view)));
 
-    login().catch(() => {
+    login(false).catch(() => {
       $("loginState").textContent = "未登录";
-      $("answerBox").textContent = "请先登录。";
+      $("docsList").innerHTML = empty("请先登录");
+      $("historyList").innerHTML = empty("请先登录");
+      $("chunkList").innerHTML = empty("选择文档查看分块");
     });
   </script>
 </body>

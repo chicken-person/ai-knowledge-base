@@ -15,12 +15,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.crypto.Mac;
@@ -29,7 +34,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -97,7 +101,7 @@ public class AiKnowledgeBaseApplication {
 
     record DocumentRequest(
             @NotBlank @Size(max = 160) String title,
-            String originalName,
+            @Size(max = 255) String originalName,
             @NotBlank @Size(min = 10, max = 20000) String content
     ) {
     }
@@ -105,13 +109,19 @@ public class AiKnowledgeBaseApplication {
     record DocumentView(Long id, String title, String originalName, Integer chunkCount, String createdAt) {
     }
 
-    record AskRequest(@NotBlank String question, Integer topK) {
+    record ChunkView(Long id, Integer chunkIndex, String content, String createdAt) {
+    }
+
+    record DashboardView(long documentCount, long chunkCount, long conversationCount, String latestQuestion, String latestAskedAt) {
+    }
+
+    record AskRequest(@NotBlank @Size(max = 500) String question, Integer topK) {
     }
 
     record ChunkHit(String title, String content, double score) {
     }
 
-    record AskResponse(String question, String answer, List<ChunkHit> references) {
+    record AskResponse(String question, String answer, List<ChunkHit> references, double confidence) {
     }
 
     record ConversationView(Long id, String question, String answer, String createdAt) {
@@ -176,6 +186,34 @@ public class AiKnowledgeBaseApplication {
             return ApiResponse.ok(documentService.listDocuments(userId));
         }
 
+        @GetMapping("/documents/{id}/chunks")
+        ApiResponse<List<ChunkView>> chunks(
+                @RequestHeader(value = "Authorization", required = false) String authorization,
+                @PathVariable long id
+        ) {
+            long userId = tokenService.requireUser(authorization);
+            return ApiResponse.ok(documentService.listChunks(userId, id));
+        }
+
+        @PostMapping("/documents/{id}/reindex")
+        ApiResponse<DocumentView> reindex(
+                @RequestHeader(value = "Authorization", required = false) String authorization,
+                @PathVariable long id
+        ) {
+            long userId = tokenService.requireUser(authorization);
+            return ApiResponse.ok(documentService.reindex(userId, id));
+        }
+
+        @DeleteMapping("/documents/{id}")
+        ApiResponse<Map<String, Object>> delete(
+                @RequestHeader(value = "Authorization", required = false) String authorization,
+                @PathVariable long id
+        ) {
+            long userId = tokenService.requireUser(authorization);
+            documentService.deleteDocument(userId, id);
+            return ApiResponse.ok(Map.of("deleted", true));
+        }
+
         @PostMapping("/ask")
         ApiResponse<AskResponse> ask(
                 @RequestHeader(value = "Authorization", required = false) String authorization,
@@ -189,6 +227,35 @@ public class AiKnowledgeBaseApplication {
         ApiResponse<List<ConversationView>> conversations(@RequestHeader(value = "Authorization", required = false) String authorization) {
             long userId = tokenService.requireUser(authorization);
             return ApiResponse.ok(documentService.listConversations(userId));
+        }
+
+        @GetMapping("/dashboard")
+        ApiResponse<DashboardView> dashboard(@RequestHeader(value = "Authorization", required = false) String authorization) {
+            long userId = tokenService.requireUser(authorization);
+            return ApiResponse.ok(documentService.dashboard(userId));
+        }
+    }
+
+    @RestControllerAdvice
+    static class ApiExceptionHandler {
+        @ExceptionHandler(ResponseStatusException.class)
+        ResponseEntity<ApiResponse<Object>> responseStatus(ResponseStatusException ex) {
+            String message = ex.getReason() == null ? "request failed" : ex.getReason();
+            return ResponseEntity.status(ex.getStatusCode()).body(ApiResponse.fail(message));
+        }
+
+        @ExceptionHandler(MethodArgumentNotValidException.class)
+        ResponseEntity<ApiResponse<Object>> validation(MethodArgumentNotValidException ex) {
+            String message = ex.getBindingResult().getFieldErrors().stream()
+                    .findFirst()
+                    .map(error -> error.getField() + " " + error.getDefaultMessage())
+                    .orElse("invalid request");
+            return ResponseEntity.badRequest().body(ApiResponse.fail(message));
+        }
+
+        @ExceptionHandler(Exception.class)
+        ResponseEntity<ApiResponse<Object>> unexpected(Exception ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.fail("server error"));
         }
     }
 
@@ -317,6 +384,9 @@ public class AiKnowledgeBaseApplication {
                     throw new IllegalArgumentException("bad signature");
                 }
                 String[] values = payload.split(":");
+                if (values.length != 2) {
+                    throw new IllegalArgumentException("bad payload");
+                }
                 long expiresAt = Long.parseLong(values[1]);
                 if (Instant.now().getEpochSecond() > expiresAt) {
                     throw new IllegalArgumentException("expired");
@@ -345,6 +415,8 @@ public class AiKnowledgeBaseApplication {
     @Service
     static class DocumentService {
         private static final int VECTOR_SIZE = 128;
+        private static final int CHUNK_SIZE = 520;
+        private static final int CHUNK_OVERLAP = 80;
 
         private final JdbcTemplate jdbcTemplate;
 
@@ -361,22 +433,14 @@ public class AiKnowledgeBaseApplication {
                 );
                 statement.setLong(1, userId);
                 statement.setString(2, request.title().trim());
-                statement.setString(3, request.originalName());
-                statement.setString(4, request.content());
+                statement.setString(3, sanitizeFileName(request.originalName()));
+                statement.setString(4, request.content().trim());
                 return statement;
             }, keyHolder);
             long documentId = Objects.requireNonNull(keyHolder.getKey()).longValue();
-            List<String> chunks = chunk(request.content(), 480);
-            for (int i = 0; i < chunks.size(); i++) {
-                jdbcTemplate.update(
-                        "INSERT INTO document_chunks(document_id, chunk_index, content, embedding) VALUES (?, ?, ?, ?)",
-                        documentId,
-                        i,
-                        chunks.get(i),
-                        serialize(embed(chunks.get(i)))
-                );
-            }
-            return new DocumentView(documentId, request.title(), request.originalName(), chunks.size(), Instant.now().toString());
+            List<String> chunks = chunk(request.content(), CHUNK_SIZE);
+            writeChunks(documentId, chunks);
+            return new DocumentView(documentId, request.title().trim(), sanitizeFileName(request.originalName()), chunks.size(), Instant.now().toString());
         }
 
         int countDocuments(long userId) {
@@ -405,6 +469,39 @@ public class AiKnowledgeBaseApplication {
             );
         }
 
+        List<ChunkView> listChunks(long userId, long documentId) {
+            ensureOwnedDocument(userId, documentId);
+            return jdbcTemplate.query(
+                    """
+                    SELECT id, chunk_index, content, created_at
+                    FROM document_chunks
+                    WHERE document_id = ?
+                    ORDER BY chunk_index
+                    """,
+                    (rs, rowNum) -> new ChunkView(
+                            rs.getLong("id"),
+                            rs.getInt("chunk_index"),
+                            rs.getString("content"),
+                            rs.getTimestamp("created_at").toInstant().toString()
+                    ),
+                    documentId
+            );
+        }
+
+        DocumentView reindex(long userId, long documentId) {
+            DocumentContent document = documentContent(userId, documentId);
+            List<String> chunks = chunk(document.content(), CHUNK_SIZE);
+            jdbcTemplate.update("DELETE FROM document_chunks WHERE document_id = ?", documentId);
+            writeChunks(documentId, chunks);
+            return new DocumentView(documentId, document.title(), document.originalName(), chunks.size(), Instant.now().toString());
+        }
+
+        void deleteDocument(long userId, long documentId) {
+            ensureOwnedDocument(userId, documentId);
+            jdbcTemplate.update("DELETE FROM document_chunks WHERE document_id = ?", documentId);
+            jdbcTemplate.update("DELETE FROM documents WHERE id = ? AND user_id = ?", documentId, userId);
+        }
+
         AskResponse ask(long userId, AskRequest request) {
             int topK = request.topK() == null ? 3 : Math.max(1, Math.min(request.topK(), 5));
             double[] queryVector = embed(request.question());
@@ -428,13 +525,14 @@ public class AiKnowledgeBaseApplication {
                     .toList();
 
             String answer = composeAnswer(request.question(), hits);
+            double confidence = hits.isEmpty() ? 0 : Math.round(hits.get(0).score() * 1000.0) / 1000.0;
             jdbcTemplate.update(
                     "INSERT INTO conversations(user_id, question, answer) VALUES (?, ?, ?)",
                     userId,
                     request.question(),
                     answer
             );
-            return new AskResponse(request.question(), answer, hits);
+            return new AskResponse(request.question(), answer, hits, confidence);
         }
 
         List<ConversationView> listConversations(long userId) {
@@ -448,6 +546,51 @@ public class AiKnowledgeBaseApplication {
                     ),
                     userId
             );
+        }
+
+        DashboardView dashboard(long userId) {
+            Long documentCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM documents WHERE user_id = ?", Long.class, userId);
+            Long chunkCount = jdbcTemplate.queryForObject(
+                    """
+                    SELECT COUNT(*)
+                    FROM document_chunks c
+                    JOIN documents d ON d.id = c.document_id
+                    WHERE d.user_id = ?
+                    """,
+                    Long.class,
+                    userId
+            );
+            Long conversationCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM conversations WHERE user_id = ?", Long.class, userId);
+            List<ConversationView> latest = jdbcTemplate.query(
+                    "SELECT id, question, answer, created_at FROM conversations WHERE user_id = ? ORDER BY id DESC LIMIT 1",
+                    (rs, rowNum) -> new ConversationView(
+                            rs.getLong("id"),
+                            rs.getString("question"),
+                            rs.getString("answer"),
+                            rs.getTimestamp("created_at").toInstant().toString()
+                    ),
+                    userId
+            );
+            ConversationView row = latest.isEmpty() ? null : latest.get(0);
+            return new DashboardView(
+                    documentCount == null ? 0 : documentCount,
+                    chunkCount == null ? 0 : chunkCount,
+                    conversationCount == null ? 0 : conversationCount,
+                    row == null ? "" : row.question(),
+                    row == null ? "" : row.createdAt()
+            );
+        }
+
+        private void writeChunks(long documentId, List<String> chunks) {
+            for (int i = 0; i < chunks.size(); i++) {
+                jdbcTemplate.update(
+                        "INSERT INTO document_chunks(document_id, chunk_index, content, embedding) VALUES (?, ?, ?, ?)",
+                        documentId,
+                        i,
+                        chunks.get(i),
+                        serialize(embed(chunks.get(i)))
+                );
+            }
         }
 
         private String composeAnswer(String question, List<ChunkHit> hits) {
@@ -473,8 +616,30 @@ public class AiKnowledgeBaseApplication {
         private List<String> chunk(String content, int maxLength) {
             List<String> result = new ArrayList<>();
             String normalized = content.replace("\r\n", "\n").trim();
-            for (int start = 0; start < normalized.length(); start += maxLength) {
-                result.add(normalized.substring(start, Math.min(start + maxLength, normalized.length())).trim());
+            if (normalized.isBlank()) {
+                return result;
+            }
+            for (String paragraph : normalized.split("\\n\\s*\\n")) {
+                String value = paragraph.trim();
+                if (value.isBlank()) {
+                    continue;
+                }
+                if (value.length() <= maxLength) {
+                    result.add(value);
+                    continue;
+                }
+                int start = 0;
+                while (start < value.length()) {
+                    int end = Math.min(start + maxLength, value.length());
+                    String chunk = value.substring(start, end).trim();
+                    if (!chunk.isBlank()) {
+                        result.add(chunk);
+                    }
+                    if (end == value.length()) {
+                        break;
+                    }
+                    start = Math.max(end - CHUNK_OVERLAP, start + 1);
+                }
             }
             return result;
         }
@@ -536,6 +701,48 @@ public class AiKnowledgeBaseApplication {
                 return oneLine;
             }
             return oneLine.substring(0, maxLength) + "...";
+        }
+
+        private String sanitizeFileName(String value) {
+            if (value == null || value.isBlank()) {
+                return "manual-input.txt";
+            }
+            return value.replace("\\", "/")
+                    .substring(value.replace("\\", "/").lastIndexOf("/") + 1)
+                    .trim();
+        }
+
+        private void ensureOwnedDocument(long userId, long documentId) {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM documents WHERE id = ? AND user_id = ?",
+                    Integer.class,
+                    documentId,
+                    userId
+            );
+            if (count == null || count == 0) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "document not found");
+            }
+        }
+
+        private DocumentContent documentContent(long userId, long documentId) {
+            return jdbcTemplate.query(
+                    "SELECT title, original_name, content FROM documents WHERE id = ? AND user_id = ?",
+                    rs -> {
+                        if (!rs.next()) {
+                            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "document not found");
+                        }
+                        return new DocumentContent(
+                                rs.getString("title"),
+                                rs.getString("original_name"),
+                                rs.getString("content")
+                        );
+                    },
+                    documentId,
+                    userId
+            );
+        }
+
+        record DocumentContent(String title, String originalName, String content) {
         }
     }
 }

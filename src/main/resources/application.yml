@@ -11,7 +11,7 @@ spring:
     password:
   h2:
     console:
-      enabled: true
+      enabled: ${H2_CONSOLE_ENABLED:true}
       path: /h2-console
   sql:
     init:
@@ -19,4 +19,4 @@ spring:
       continue-on-error: true
 
 app:
-  token-secret: change-me-in-production
+  token-secret: ${APP_TOKEN_SECRET:local-dev-ai-knowledge-base-secret}

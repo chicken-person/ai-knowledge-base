@@ -1,54 +1,87 @@
-# AI 文档知识库问答系统
+# AI 文档知识库
 
-面向 Java 后端实习投递的 RAG 风格项目。默认模式使用 H2 文件数据库和本地轻量向量检索，方便在没有 MySQL、Redis、Qdrant 的电脑上直接运行；后续可以平滑替换为 MySQL + Redis + Qdrant + 大模型 API。
+面向 Java 后端实习投递的 RAG 风格知识库项目。项目支持用户登录、文档入库、文本分块、本地向量检索、知识库问答、引用片段展示、问答历史、重建索引和文档删除。默认使用 H2 文件数据库，下载后可以直接运行，也预留了迁移到 MySQL、Redis、Qdrant/Milvus 和真实大模型 API 的空间。
+
+![项目截图](docs/screenshots/overview.png)
 
 ## 技术栈
 
 - Java 17
-- Spring Boot 3
+- Spring Boot 3.3
 - Spring Web / Validation / JDBC
-- H2 本地文件数据库
-- 轻量向量检索与 RAG 问答流程
-- Docker / MySQL / Redis / Qdrant 扩展预留
+- H2 本地文件数据库，兼容 MySQL 模式
+- HMAC Token 鉴权
+- 本地轻量向量检索，支持替换为真实 Embedding + 向量数据库
+- JUnit 5 / Spring Boot Test
+- Docker / Docker Compose
+
+## 核心功能
+
+- 登录注册：密码加盐哈希存储，接口使用 Bearer Token 鉴权。
+- 文档管理：新增文档、文档列表、删除文档、查看分块。
+- RAG 问答：问题向量化、相似片段检索、引用片段返回、规则化答案生成。
+- 索引维护：支持对单篇文档重新分块和重建向量索引。
+- 仪表盘：展示文档数、文本片段数、问答记录数和最近问题。
+- 可视化页面：打开 jar 后直接访问 `http://localhost:8081/` 演示完整链路。
 
 ## 本地运行
 
-构建 jar：
-
 ```powershell
+mvn test
 mvn -DskipTests package
-```
-
-启动服务：
-
-```powershell
 java -jar target/ai-knowledge-base-0.1.0.jar
 ```
 
-服务默认端口：`8081`
+也可以使用脚本：
 
-可视化页面：
+```powershell
+powershell -ExecutionPolicy Bypass -File .\verify.ps1
+powershell -ExecutionPolicy Bypass -File .\start-dev.ps1
+```
+
+访问地址：
 
 ```text
 http://localhost:8081/
 ```
 
-健康检查：
+测试账号：
 
-```powershell
-curl http://localhost:8081/api/health
+```text
+username: demo
+password: demo123456
 ```
 
-## 测试账号
+## 配置项
 
-启动后会自动创建：
+```powershell
+$env:APP_TOKEN_SECRET="replace-with-a-long-random-secret"
+$env:H2_CONSOLE_ENABLED="false"
+```
 
-- 用户名：`demo`
-- 密码：`demo123456`
+默认开发库：
 
-## 核心接口
+```text
+jdbc:h2:file:./data/ai-knowledge-base
+```
 
-登录：
+## 接口说明
+
+| 方法 | 地址 | 说明 |
+| --- | --- | --- |
+| GET | `/api/health` | 健康检查 |
+| POST | `/api/auth/register` | 注册并返回 token |
+| POST | `/api/auth/login` | 登录并返回 token |
+| POST | `/api/documents` | 新增文档 |
+| GET | `/api/documents` | 文档列表 |
+| GET | `/api/documents/{id}/chunks` | 查看文档分块 |
+| POST | `/api/documents/{id}/reindex` | 重建文档索引 |
+| DELETE | `/api/documents/{id}` | 删除文档 |
+| POST | `/api/ask` | 知识库问答 |
+| GET | `/api/conversations` | 问答历史 |
+| GET | `/api/dashboard` | 仪表盘统计 |
+
+登录示例：
 
 ```powershell
 curl -X POST http://localhost:8081/api/auth/login `
@@ -56,16 +89,7 @@ curl -X POST http://localhost:8081/api/auth/login `
   -d "{\"username\":\"demo\",\"password\":\"demo123456\"}"
 ```
 
-上传文档：
-
-```powershell
-curl -X POST http://localhost:8081/api/documents `
-  -H "Content-Type: application/json" `
-  -H "Authorization: Bearer <token>" `
-  -d "{\"title\":\"Java 面试笔记\",\"originalName\":\"note.txt\",\"content\":\"Redis 可以用于热点缓存、验证码缓存、接口限流。MySQL 索引可以提升查询效率，但要考虑回表和写入成本。\"}"
-```
-
-知识库问答：
+问答示例：
 
 ```powershell
 curl -X POST http://localhost:8081/api/ask `
@@ -74,9 +98,35 @@ curl -X POST http://localhost:8081/api/ask `
   -d "{\"question\":\"Redis 在项目里能解决什么问题？\",\"topK\":3}"
 ```
 
-## 可以写进简历的亮点
+## 代码质量改进
 
-- 实现用户登录鉴权、文档管理、文本分段、向量化、相似度检索、RAG 问答和历史记录。
-- 提供可视化前端页面，支持文档上传、知识库问答、引用片段、文档列表和问答历史展示。
-- 默认使用本地轻量向量检索，便于演示；工程结构支持替换为 Qdrant / Milvus 等向量数据库。
-- 可继续接入 Redis 做接口限流、热点问答缓存；接入 MySQL 支持生产化数据存储。
+本次已补齐：
+
+- 统一异常返回，前端和测试都能稳定读取错误信息。
+- Token payload 结构校验，密钥支持环境变量覆盖。
+- 文档文件名清洗，避免展示脏路径。
+- 段落优先分块和重建索引接口。
+- 文档、分块、问答历史常用查询索引。
+- 集成测试覆盖核心业务链路。
+
+详细记录见 [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md)。
+
+## 面试亮点
+
+- RAG 工程链路：文档清洗、分块、向量化、检索、引用、答案生成。
+- 索引维护能力：支持重建索引和查看分块，便于解释线上知识库如何迭代。
+- 安全基础：密码加盐哈希、HMAC Token、密钥环境变量化。
+- 工程完整度：统一异常、参数校验、自动化测试、Docker 部署、可视化前端。
+- 可扩展方向：Embedding API、Qdrant/Milvus、PDF/Word 解析、Redis 缓存、多租户权限。
+
+完整话术见 [docs/INTERVIEW_NOTES.md](docs/INTERVIEW_NOTES.md)。
+
+## 测试与部署
+
+```powershell
+mvn test
+mvn -DskipTests package
+docker build -t ai-knowledge-base:0.1.0 .
+```
+
+部署说明见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。
