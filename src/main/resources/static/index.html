@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 文档知识库</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --surface-2: #eef4f8;
+      --ink: #17202a;
+      --muted: #637083;
+      --line: #d9e2ec;
+      --primary: #1769aa;
+      --primary-2: #0f4f87;
+      --green: #1f8a5b;
+      --amber: #b46a00;
+      --red: #b42318;
+      --shadow: 0 14px 34px rgba(31, 52, 76, 0.12);
+      font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(23, 105, 170, 0.08), rgba(255, 255, 255, 0) 280px),
+        var(--bg);
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      border-radius: 6px;
+      min-height: 38px;
+      padding: 0 14px;
+      color: #fff;
+      background: var(--primary);
+      font-weight: 700;
+    }
+
+    button:hover { background: var(--primary-2); }
+    button.secondary { color: var(--ink); background: #e7edf3; }
+    button.secondary:hover { background: #d7e1eb; }
+    button.ghost { color: var(--primary); background: transparent; border: 1px solid var(--line); }
+    button.ghost:hover { background: #edf5fb; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 11px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+      line-height: 1.55;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(23, 105, 170, 0.14);
+    }
+
+    .shell {
+      width: min(1440px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 34px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 0 22px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: linear-gradient(135deg, #1769aa, #1f8a5b);
+      font-weight: 900;
+    }
+
+    h1 {
+      font-size: 24px;
+      line-height: 1.2;
+      margin: 0;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .login-strip {
+      display: grid;
+      grid-template-columns: minmax(120px, 170px) minmax(120px, 170px) auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      color: var(--green);
+      background: #e6f5ed;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 390px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-title {
+      font-size: 15px;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .panel-body {
+      padding: 16px;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .main-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      padding: 14px 15px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 24px;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .answer {
+      white-space: pre-wrap;
+      line-height: 1.65;
+      min-height: 164px;
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid #cfe0ef;
+      background: #f8fbfe;
+    }
+
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 12px;
+    }
+
+    .item-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
+    .item-title {
+      font-weight: 800;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .score {
+      flex: 0 0 auto;
+      color: var(--amber);
+      background: #fff3df;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      padding: 6px;
+      border-radius: 8px;
+      background: var(--surface-2);
+    }
+
+    .tab {
+      min-height: 32px;
+      color: var(--muted);
+      background: transparent;
+      padding: 0 12px;
+    }
+
+    .tab.active {
+      color: var(--ink);
+      background: #fff;
+      box-shadow: 0 1px 4px rgba(28, 46, 68, 0.1);
+    }
+
+    .hidden { display: none !important; }
+
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      max-width: min(420px, calc(100vw - 40px));
+      padding: 12px 14px;
+      border-radius: 8px;
+      color: #fff;
+      background: #17202a;
+      box-shadow: var(--shadow);
+      transform: translateY(90px);
+      opacity: 0;
+      transition: 0.2s ease;
+      z-index: 10;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 980px) {
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .login-strip { width: 100%; grid-template-columns: 1fr 1fr auto; }
+      .status-pill { grid-column: 1 / -1; width: fit-content; }
+      .grid { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 620px) {
+      .shell { width: min(100% - 20px, 1440px); padding-top: 14px; }
+      .login-strip { grid-template-columns: 1fr; }
+      .actions button { width: 100%; }
+      h1 { font-size: 21px; }
+      .subtitle { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">AI</div>
+        <div>
+          <h1>AI 文档知识库</h1>
+          <div class="subtitle">Spring Boot · 本地向量检索 · RAG 问答</div>
+        </div>
+      </div>
+      <div class="login-strip">
+        <input id="username" value="demo" aria-label="用户名" />
+        <input id="password" value="demo123456" type="password" aria-label="密码" />
+        <button id="loginBtn">登录</button>
+        <span class="status-pill"><span class="dot"></span><span id="loginState">未登录</span></span>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">知识库输入</h2>
+          <button class="ghost" id="sampleDocBtn">示例</button>
+        </div>
+        <div class="panel-body">
+          <div class="field">
+            <label for="docTitle">文档标题</label>
+            <input id="docTitle" value="Redis 项目实践笔记" />
+          </div>
+          <div class="field">
+            <label for="docName">文件名</label>
+            <input id="docName" value="redis-note.txt" />
+          </div>
+          <div class="field">
+            <label for="docContent">文档内容</label>
+            <textarea id="docContent">Redis 在后端项目中可以用于验证码缓存、热点数据缓存、接口限流和分布式锁。缓存穿透可以用布隆过滤器或空值缓存处理，缓存击穿可以用互斥锁或逻辑过期处理，缓存雪崩可以通过随机过期时间和多级缓存降低风险。</textarea>
+          </div>
+          <div class="actions">
+            <button id="uploadBtn">上传文档</button>
+            <button class="secondary" id="refreshBtn">刷新数据</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="main-stack">
+        <div class="stats">
+          <div class="stat"><strong id="docCount">0</strong><span>文档数</span></div>
+          <div class="stat"><strong id="chunkCount">0</strong><span>文本片段</span></div>
+          <div class="stat"><strong id="chatCount">0</strong><span>问答记录</span></div>
+        </div>
+
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">知识库问答</h2>
+            <div class="tabs">
+              <button class="tab active" data-view="answerView">回答</button>
+              <button class="tab" data-view="refsView">引用</button>
+              <button class="tab" data-view="docsView">文档</button>
+              <button class="tab" data-view="historyView">历史</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="field">
+              <label for="question">问题</label>
+              <input id="question" value="Redis 在项目里能解决什么问题？" />
+            </div>
+            <div class="actions" style="margin-bottom: 14px;">
+              <button id="askBtn">提问</button>
+              <button class="secondary" id="sampleQuestionBtn">换一个问题</button>
+            </div>
+
+            <div id="answerView">
+              <div class="answer" id="answerBox">登录后即可提问。</div>
+            </div>
+            <div id="refsView" class="hidden">
+              <div class="list" id="refsList"></div>
+            </div>
+            <div id="docsView" class="hidden">
+              <div class="list" id="docsList"></div>
+            </div>
+            <div id="historyView" class="hidden">
+              <div class="list" id="historyList"></div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const state = {
+      token: localStorage.getItem("aiKbToken") || "",
+      user: null,
+      documents: [],
+      conversations: [],
+      references: []
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function toast(message) {
+      const box = $("toast");
+      box.textContent = message;
+      box.classList.add("show");
+      clearTimeout(box.timer);
+      box.timer = setTimeout(() => box.classList.remove("show"), 2600);
+    }
+
+    async function api(path, options = {}) {
+      const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+      if (state.token) headers.Authorization = `Bearer ${state.token}`;
+      const res = await fetch(path, { ...options, headers });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || body.success === false) {
+        throw new Error(body.message || `请求失败：${res.status}`);
+      }
+      return body.data;
+    }
+
+    async function login() {
+      const data = await api("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username: $("username").value, password: $("password").value })
+      });
+      state.token = data.token;
+      state.user = data.user;
+      localStorage.setItem("aiKbToken", state.token);
+      $("loginState").textContent = `已登录：${state.user.username}`;
+      $("answerBox").textContent = "知识库已就绪。";
+      await refreshAll();
+      toast("登录成功");
+    }
+
+    async function uploadDocument() {
+      $("uploadBtn").disabled = true;
+      try {
+        await api("/api/documents", {
+          method: "POST",
+          body: JSON.stringify({
+            title: $("docTitle").value,
+            originalName: $("docName").value,
+            content: $("docContent").value
+          })
+        });
+        await refreshAll();
+        toast("文档已写入知识库");
+      } finally {
+        $("uploadBtn").disabled = false;
+      }
+    }
+
+    async function askQuestion() {
+      $("askBtn").disabled = true;
+      $("answerBox").textContent = "正在检索知识库...";
+      try {
+        const data = await api("/api/ask", {
+          method: "POST",
+          body: JSON.stringify({ question: $("question").value, topK: 3 })
+        });
+        state.references = data.references || [];
+        $("answerBox").textContent = data.answer;
+        renderReferences();
+        await loadConversations();
+        switchView("answerView");
+      } finally {
+        $("askBtn").disabled = false;
+      }
+    }
+
+    async function refreshAll() {
+      await Promise.all([loadDocuments(), loadConversations()]);
+      renderStats();
+    }
+
+    async function loadDocuments() {
+      state.documents = await api("/api/documents");
+      renderDocuments();
+    }
+
+    async function loadConversations() {
+      state.conversations = await api("/api/conversations");
+      renderHistory();
+      renderStats();
+    }
+
+    function renderStats() {
+      $("docCount").textContent = state.documents.length;
+      $("chunkCount").textContent = state.documents.reduce((sum, doc) => sum + (doc.chunkCount || 0), 0);
+      $("chatCount").textContent = state.conversations.length;
+    }
+
+    function renderDocuments() {
+      $("docsList").innerHTML = state.documents.map(doc => `
+        <article class="item">
+          <div class="item-head">
+            <div class="item-title">${escapeHtml(doc.title)}</div>
+            <span class="score">${doc.chunkCount} 段</span>
+          </div>
+          <div class="meta">${escapeHtml(doc.originalName || "text")} · ${formatTime(doc.createdAt)}</div>
+        </article>
+      `).join("") || empty("暂无文档");
+    }
+
+    function renderReferences() {
+      $("refsList").innerHTML = state.references.map(ref => `
+        <article class="item">
+          <div class="item-head">
+            <div class="item-title">${escapeHtml(ref.title)}</div>
+            <span class="score">${Math.round((ref.score || 0) * 100)}%</span>
+          </div>
+          <div class="meta">${escapeHtml(ref.content)}</div>
+        </article>
+      `).join("") || empty("暂无引用片段");
+    }
+
+    function renderHistory() {
+      $("historyList").innerHTML = state.conversations.map(row => `
+        <article class="item">
+          <div class="item-title">${escapeHtml(row.question)}</div>
+          <div class="meta" style="margin: 6px 0;">${formatTime(row.createdAt)}</div>
+          <div class="meta">${escapeHtml(row.answer).slice(0, 220)}${row.answer.length > 220 ? "..." : ""}</div>
+        </article>
+      `).join("") || empty("暂无问答记录");
+    }
+
+    function empty(text) {
+      return `<div class="item"><div class="meta">${text}</div></div>`;
+    }
+
+    function switchView(id) {
+      ["answerView", "refsView", "docsView", "historyView"].forEach(view => $(view).classList.toggle("hidden", view !== id));
+      document.querySelectorAll(".tab").forEach(tab => tab.classList.toggle("active", tab.dataset.view === id));
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[ch]));
+    }
+
+    function formatTime(value) {
+      if (!value) return "";
+      return new Date(value).toLocaleString("zh-CN", { hour12: false });
+    }
+
+    $("loginBtn").addEventListener("click", () => login().catch(err => toast(err.message)));
+    $("uploadBtn").addEventListener("click", () => uploadDocument().catch(err => toast(err.message)));
+    $("askBtn").addEventListener("click", () => askQuestion().catch(err => {
+      $("answerBox").textContent = "请求失败。";
+      toast(err.message);
+    }));
+    $("refreshBtn").addEventListener("click", () => refreshAll().then(() => toast("数据已刷新")).catch(err => toast(err.message)));
+    $("sampleDocBtn").addEventListener("click", () => {
+      $("docTitle").value = "Spring Boot 接口设计笔记";
+      $("docName").value = "spring-api-note.txt";
+      $("docContent").value = "Spring Boot 后端项目通常采用 Controller、Service、Mapper 分层。Controller 负责接收请求和参数校验，Service 负责业务逻辑，Mapper 或 JdbcTemplate 负责数据访问。统一返回结构和全局异常处理可以提升接口一致性。";
+    });
+    $("sampleQuestionBtn").addEventListener("click", () => {
+      const questions = ["RAG 的流程是什么？", "MySQL 索引为什么能提升查询效率？", "Spring Boot 项目为什么要分层？"];
+      $("question").value = questions[Math.floor(Math.random() * questions.length)];
+    });
+    document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => switchView(tab.dataset.view)));
+
+    login().catch(() => {
+      $("loginState").textContent = "未登录";
+      $("answerBox").textContent = "请先登录。";
+    });
+  </script>
+</body>
+</html>
